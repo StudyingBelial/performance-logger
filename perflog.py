@@ -10,7 +10,7 @@ class Perflog():
     def __init__(self):
         self.__steup_logger()
         self.__isnvidia = self.__check_nvidia()
-        
+
         self.__total_runtime = 0
         self.__last_lap_time = 0
 
@@ -163,16 +163,86 @@ class Perflog():
                 return False
 
     def __get_gpu_clock(self):
-        pass
+        """
+        Returns the current graphics clock speed in MHz for the first detected NVIDIA GPU.
+        Returns None if pynvml is not available or no NVIDIA GPU is found.
+        """
+        if self.__check_nvidia:
+            try:
+                nvmlInit()
+                handel = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
+                # Get graphics clock info (NVML_CLOCK_GRAPHICS) at current level (NVML_CLOCK_ID_CURRENT)
+                clock_speed = nvmlDeviceGetClockInfo(handel, NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CURRENT)
+                nvmlShutdown()
+                return float(clock_speed) # Clock speed in MHz
+            except Exception as e:
+                self.__logger.error(f"Unexpected error getting GPU clock speed: {e}")
+                return None
 
     def __get_gpu_util(self):
-        pass
+        """
+        Returns the GPU utilization as a percentage for the first detected NVIDIA GPU.
+        Returns None if pynvml is not available or no NVIDIA GPU is found.
+        """
+        if self.__isnvidia:
+            try:
+                nvmlInit()
+                handle = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
+                utilization = nvmlDeviceGetUtilizationRates(handle)
+                nvmlShutdown()
+                return float(utilization.gpu) # GPU utilization as a percentage
+            except Exception as e:
+                self.__logger.error(f"Unexpected error getting GPU utilization: {e}")
+                return None
 
     def __get_vram_usage(self):
-        pass
+        """
+        Returns the used VRAM in Megabytes (MB) for the first detected NVIDIA GPU.
+        Returns None if pynvml is not available or no NVIDIA GPU is found.
+        """
+        if self.__isnvidia:
+            try:
+                nvmlInit()
+                handle = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
+                info = nvmlDeviceGetMemoryInfo(handle)
+                nvmlShutdown()
+                return info.used / (1024 * 1024) # Convert bytes to MB
+            except Exception as e:
+                self.__logger.error(f"Unexpected error getting VRAM usage: {e}")
+                return None
 
     def __get_process_vram_usage(self):
-        pass
+        """
+        Attempts to return the VRAM usage of the current Python process in Megabytes (MB)
+        for NVIDIA GPUs. This relies on pynvml's process listing.
+        Returns None if pynvml is not available, no NVIDIA GPU, or if the process
+        is not explicitly listed by NVML (e.g., due to low activity or driver specifics).
+        """
+        if self.__isnvidia:
+            try:
+                nvmlInit()
+                current_pid = os.getpid()
+                vram_used_by_process = 0.0
+
+                device_count = nvmlDeviceGetCount()
+                for i in range(device_count):
+                    handle = nvmlDeviceGetHandleByIndex(i)
+                    # Get compute and graphics processes running on this GPU
+                    # Some processes might not be listed, or might be listed under graphics/compute
+                    for proc_info in nvmlDeviceGetComputeRunningProcesses(handle) + nvmlDeviceGetGraphicsRunningProcesses(handle):
+                        if proc_info.pid == current_pid:
+                            vram_used_by_process += proc_info.usedGpuMemory / (1024 * 1024) # Convert bytes to MB
+                            break # Found our process on this GPU, move to next GPU
+
+                nvmlShutdown()
+                if vram_used_by_process > 0:
+                    return vram_used_by_process
+                else:
+                    self.__logger.error(f"Process {current_pid} not explicitly listed by NVML for VRAM usage, or 0 VRAM used.")
+                    return 0.0 # Return 0 if not found or no VRAM used by this process
+            except Exception as e:
+                self.__logger.error(f"Unexpected error getting process VRAM usage: {e}")
+                return None
 
     @property
     def isNvidia(self):
