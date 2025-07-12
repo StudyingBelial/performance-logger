@@ -108,10 +108,25 @@ class Perflog():
             self.__loggger.error("Error getting the process CPU Utilization. {e}")
 
     def __get_ram_usage(self):
-        pass
+        """
+        Returns the system-wide physical RAM in MB(Megabytes).
+        """
+        try:
+            return psutil.virtual_memory().used / (1024 * 1024) # Conver the bytes into MB
+        except Exception as e:
+            self.__logge.error(f"Error getting RAM usage. {e}")
+            return None
 
     def __get_process_ram_usage(self):
-        pass
+        """
+        Returns the Resident Set Size (RSS) memory usage of the current Python process in MB(MegaBytes).
+        RSS is the portion of memory held in RAM.
+        """
+        try:
+            return self.__current_process.memory_info().rss / (1024 / 1024) # Conver the bytes into MB
+        except Exception as e:
+            self.__logge.error(f"Error getting Process RAM usage (RSS). {e}")
+            return None
 
     def __check_nvidia(self):
         pass
