@@ -68,22 +68,50 @@ class Perflog():
             self.__logger.error(f"Error getting lap time: {e}", exc_info=True)
             return None
 
-    def __check_nvidia(self):
-        pass
-
     def __get_cpu_util(self):
-        pass
+        """
+        Returns the current system-wide CPU utilization as a percentage.
+        This function does not have an interval to interrupt process
+        """
+        try:
+            # interval is the amount of seconds the system will pause to calculate the CPU usage for efficient execution it is None
+            return psutil.cpu_percent(interval = None)
+        except Exception as e:
+            self.__logger.error(f"Error getting the CPU Utilization. {e}")
+            return None
 
     def __get_cpu_clock(self):
-        pass
+        """
+        Returns the current CPU Clock Speed in Mhz(Mega Hertz).
+        """
+        try:
+            return psutil.cpu_freq().current
+        except Exception as e:
+            self.__logger.error(f"Error getting the CPU Clock Speed. {e}")
+            return None
 
     def __get_process_cpu_util(self):
-        pass
+        """
+        Returns the CPU Utilization of the current Python process as a percentage.
+        Requires calling this function twice with an interval for an accurate reading.
+        The first call initializes, subsequent calls return the percentage since last call.
+        For a single snapshot, it will return the percentage since process start.
+        """
+        try:
+            # psutil.cpu_percent() for a process calculates the percentage
+            # since the last call to this method, or since process start if first call.
+            # For a meaningful "snapshot" after some work, call it once before and once after.
+            return self.__current_process.cpu_percent(interval= None)
+        except Exception as e:
+            self.__loggger.error("Error getting the process CPU Utilization. {e}")
 
     def __get_ram_usage(self):
         pass
 
     def __get_process_ram_usage(self):
+        pass
+
+    def __check_nvidia(self):
         pass
 
     def __get_gpu_clock(self):
