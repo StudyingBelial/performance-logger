@@ -19,8 +19,36 @@ class Perflog():
         handler.setFormatter(formatter)
         self.__logger.addHandler(handler)
 
-    def __log(self):
-        pass
+    def __log(self, log_message : str):
+        if self.__isnvidia:
+            self.__logger.debug(log_message,
+                extra={
+                    'runtime' : self.__total_runtime,
+                    'lap' : self.__get_lap(),
+                    'cpu_utilization' : self.get_cpu_util(),
+                    'cpu_clockspeed' : self.get_cpu_clock(),
+                    'ram' : self.get_ram_usage(),
+                    'process ram' : self.get_process_ram_usage(),
+                    'gpu_utilization' : self.__get_gpu_util(),
+                    'gpu_clockspeed' : self.__get_gpu_clock(),
+                    'vram' : self.__get_vram_usage(),
+                    'process_vram' : self.__get_process_vram_usage()
+                    })
+        else:
+            self.__logger.debug(log_message,
+                extra={
+                    'runtime' : self.__total_runtime,
+                    'lap' : self.__get_lap(),
+                    'cpu_utilization' : self.get_cpu_util(),
+                    'cpu_clockspeed' : self.get_cpu_clock(),
+                    'ram' : self.get_ram_usage(),
+                    'process_cpu_utilization' : self.get_process_cpu_util(),
+                    'process_ram' : self.get_process_ram_usage(),
+                    'gpu_utilization' : "None",
+                    'gpu_clockspeed' : "None",
+                    'vram' : "None",
+                    'process_vram' : "None"
+                    })
 
     def __get_lap(self):
         pass
