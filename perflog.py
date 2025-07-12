@@ -1,5 +1,11 @@
 from imports import *
 
+try:
+    import pynvml
+    _NVML_AVAILABLE = True
+except ImportError:
+    _NVML_AVAILABLE = False
+
 class Perflog():
     def __init__(self):
         self.__steup_logger()
@@ -129,7 +135,20 @@ class Perflog():
             return None
 
     def __check_nvidia(self):
-        pass
+        try:
+            if not _NVML_AVAILABLE:
+                return False
+            else:
+                nvmlInit()
+                device_count = nvmlDeviceGetCount()
+                nvmlShutdown()
+                if device_count > 0:
+                    return True
+                else:
+                    return False
+        except Exception as e:
+                self.__logger.error(f"Eror checking for NVIDIA graphics card. So no card exists. {e}")
+                return False
 
     def __get_gpu_clock(self):
         pass
@@ -145,4 +164,4 @@ class Perflog():
 
     @property
     def isNvidia(self):
-        pass
+        return self.__isnvidia
