@@ -51,7 +51,22 @@ class Perflog():
                     })
 
     def __get_lap(self):
-        pass
+        """
+        Returns the time elapsed since the last call to this method (in seconds).
+        If it's the first call after initialization, it returns time since instance creation.
+        Returns None if an error occurs.
+        """
+        try:
+            current_time = time.perf_counter()
+            # Calculate the duration of this 'lap'
+            lap_duration = current_time - self.__last_lap_time
+            # Update the baseline for the next 'lap'
+            self.__last_lap_time = current_time
+            self.__total_runtime += lap_duration
+            return lap_duration
+        except Exception as e:
+            self.__logger.error(f"Error getting lap time: {e}", exc_info=True)
+            return None
 
     def __check_nvidia(self):
         pass
