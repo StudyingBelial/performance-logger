@@ -9,6 +9,18 @@ except ImportError:
 class Perflog():
     def __init__(self):
         self.__steup_logger()
+        self.__isnvidia = self.__check_nvidia()
+        
+        self.__total_runtime = 0
+        self.__last_lap_time = 0
+
+        # First initialization
+        self.__get_lap()
+
+        # Creating an object for the current process
+        self.__current_process = psutil.Process(os.getpid())
+
+        # Initilization step to start counting 
         self.__get_cpu_util()
         self.__get_process_cpu_util()
 
