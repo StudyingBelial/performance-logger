@@ -6,7 +6,7 @@ try:
 except ImportError:
     _NVML_AVAILABLE = False
 
-class Perflog():
+class Perflog:
     def __init__(self):
         self.__steup_logger()
         self.__isnvidia = self.__check_nvidia()
@@ -35,11 +35,11 @@ class Perflog():
             os.mkdir(log_dir_path)
 
         handler = logging.FileHandler(log_file_path)
-        formatter = jsonlogger.JsonFormatter('%(asctime)s - %(message)s')
+        formatter = jsonlogger.JsonFormatter('%(asctime)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         self.__logger.addHandler(handler)
 
-    def __log(self, log_message : str):
+    def log(self, log_message : str):
         if self.__isnvidia:
             self.__logger.debug(log_message,
                 extra={
@@ -123,7 +123,7 @@ class Perflog():
             # For a meaningful "snapshot" after some work, call it once before and once after.
             return self.__current_process.cpu_percent(interval= None)
         except Exception as e:
-            self.__loggger.error("Error getting the process CPU Utilization. {e}")
+            self.__logger.error("Error getting the process CPU Utilization. {e}")
 
     def __get_ram_usage(self):
         """
@@ -132,7 +132,7 @@ class Perflog():
         try:
             return psutil.virtual_memory().used / (1024 * 1024) # Conver the bytes into MB
         except Exception as e:
-            self.__logge.error(f"Error getting RAM usage. {e}")
+            self.__logger.error(f"Error getting RAM usage. {e}")
             return None
 
     def __get_process_ram_usage(self):
@@ -141,9 +141,9 @@ class Perflog():
         RSS is the portion of memory held in RAM.
         """
         try:
-            return self.__current_process.memory_info().rss / (1024 / 1024) # Conver the bytes into MB
+            return self.__current_process.memory_info().rss / (1024 * 1024) # Conver the bytes into MB
         except Exception as e:
-            self.__logge.error(f"Error getting Process RAM usage (RSS). {e}")
+            self.__logger.error(f"Error getting Process RAM usage (RSS). {e}")
             return None
 
     def __check_nvidia(self):
@@ -172,7 +172,7 @@ class Perflog():
                 nvmlInit()
                 handel = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
                 # Get graphics clock info (NVML_CLOCK_GRAPHICS) at current level (NVML_CLOCK_ID_CURRENT)
-                clock_speed = nvmlDeviceGetClockInfo(handel, NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CURRENT)
+                clock_speed = nvmlDeviceGetClockInfo(handel, NVML_CLOCK_GRAPHICS)
                 nvmlShutdown()
                 return float(clock_speed) # Clock speed in MHz
             except Exception as e:
@@ -238,7 +238,6 @@ class Perflog():
                 if vram_used_by_process > 0:
                     return vram_used_by_process
                 else:
-                    self.__logger.error(f"Process {current_pid} not explicitly listed by NVML for VRAM usage, or 0 VRAM used.")
                     return 0.0 # Return 0 if not found or no VRAM used by this process
             except Exception as e:
                 self.__logger.error(f"Unexpected error getting process VRAM usage: {e}")
