@@ -1,4 +1,5 @@
-from imports import *
+from pythonjsonlogger import jsonlogger
+from pynvml import *
 
 try:
     import pynvml
