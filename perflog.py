@@ -7,9 +7,15 @@ except ImportError:
     _NVML_AVAILABLE = False
 
 class Perflog:
-    def __init__(self):
-        self.__steup_logger()
+    def __init__(self, log_file_path = None):
+        self.__steup_logger(log_file_path)
+
         self.__isnvidia = self.__check_nvidia()
+
+        # Setting up universal NVML handel
+        if self.__isnvidia:
+            nvmlInit()
+            self.__handle = nvmlDeviceGetHandleByIndex(0)
 
         self.__total_runtime = 0
         self.__last_lap_time = 0
@@ -24,12 +30,13 @@ class Perflog:
         self.__get_cpu_util()
         self.__get_process_cpu_util()
 
-    def __steup_logger(self):
+    def __steup_logger(self, log_file_path):
         self.__logger = logging.getLogger("PerfLog")
         self.__logger.setLevel(logging.DEBUG)
         cwd = os.path.abspath(os.getcwd())
-        log_dir_path = cwd + "/log"
-        log_file_path = log_dir_path + "/log.txt"
+        if not log_file_path:
+            log_dir_path = cwd + "/log"
+            log_file_path = log_dir_path + "/log.txt"
 
         if not os.path.isdir(log_dir_path):
             os.mkdir(log_dir_path)
@@ -39,7 +46,7 @@ class Perflog:
         handler.setFormatter(formatter)
         self.__logger.addHandler(handler)
 
-    def log(self, log_message : str):
+    def log(self, log_message):
         if self.__isnvidia:
             self.__logger.debug(log_message,
                 extra={
@@ -151,9 +158,7 @@ class Perflog:
             if not _NVML_AVAILABLE:
                 return False
             else:
-                nvmlInit()
                 device_count = nvmlDeviceGetCount()
-                nvmlShutdown()
                 if device_count > 0:
                     return True
                 else:
@@ -169,11 +174,8 @@ class Perflog:
         """
         if self.__check_nvidia:
             try:
-                nvmlInit()
-                handel = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
                 # Get graphics clock info (NVML_CLOCK_GRAPHICS) at current level (NVML_CLOCK_ID_CURRENT)
-                clock_speed = nvmlDeviceGetClockInfo(handel, NVML_CLOCK_GRAPHICS)
-                nvmlShutdown()
+                clock_speed = nvmlDeviceGetClockInfo(self.__handle, NVML_CLOCK_GRAPHICS)
                 return float(clock_speed) # Clock speed in MHz
             except Exception as e:
                 self.__logger.error(f"Unexpected error getting GPU clock speed: {e}")
@@ -186,10 +188,7 @@ class Perflog:
         """
         if self.__isnvidia:
             try:
-                nvmlInit()
-                handle = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
-                utilization = nvmlDeviceGetUtilizationRates(handle)
-                nvmlShutdown()
+                utilization = nvmlDeviceGetUtilizationRates(self.__handle)
                 return float(utilization.gpu) # GPU utilization as a percentage
             except Exception as e:
                 self.__logger.error(f"Unexpected error getting GPU utilization: {e}")
@@ -202,10 +201,8 @@ class Perflog:
         """
         if self.__isnvidia:
             try:
-                nvmlInit()
-                handle = nvmlDeviceGetHandleByIndex(0) # Get handle for the first GPU (index 0)
-                info = nvmlDeviceGetMemoryInfo(handle)
-                nvmlShutdown()
+                # Get handle for the first GPU (index 0)
+                info = nvmlDeviceGetMemoryInfo(self.__handle)
                 return info.used / (1024 * 1024) # Convert bytes to MB
             except Exception as e:
                 self.__logger.error(f"Unexpected error getting VRAM usage: {e}")
@@ -220,21 +217,13 @@ class Perflog:
         """
         if self.__isnvidia:
             try:
-                nvmlInit()
                 current_pid = os.getpid()
                 vram_used_by_process = 0.0
+                for proc_info in nvmlDeviceGetComputeRunningProcesses(self.__handle) + nvmlDeviceGetGraphicsRunningProcesses(self.__handle):
+                    if proc_info.pid == current_pid:
+                        vram_used_by_process += proc_info.usedGpuMemory / (1024 * 1024) # Convert bytes to MB
+                        break # Found our process, no need to continue
 
-                device_count = nvmlDeviceGetCount()
-                for i in range(device_count):
-                    handle = nvmlDeviceGetHandleByIndex(i)
-                    # Get compute and graphics processes running on this GPU
-                    # Some processes might not be listed, or might be listed under graphics/compute
-                    for proc_info in nvmlDeviceGetComputeRunningProcesses(handle) + nvmlDeviceGetGraphicsRunningProcesses(handle):
-                        if proc_info.pid == current_pid:
-                            vram_used_by_process += proc_info.usedGpuMemory / (1024 * 1024) # Convert bytes to MB
-                            break # Found our process on this GPU, move to next GPU
-
-                nvmlShutdown()
                 if vram_used_by_process > 0:
                     return vram_used_by_process
                 else:
@@ -242,6 +231,17 @@ class Perflog:
             except Exception as e:
                 self.__logger.error(f"Unexpected error getting process VRAM usage: {e}")
                 return None
+
+    def close(self):
+        """
+        Closes the NVML at the end of the python process.
+        Has to be closed manually by the user.
+        """
+        if _NVML_AVAILABLE:
+            try:
+                nvmlShutdown() # Closing the universal NVML handel
+            except Exception:
+                pass
 
     @property
     def isNvidia(self):
