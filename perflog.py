@@ -1,3 +1,7 @@
+import logging
+import psutil
+import time
+import os
 from pythonjsonlogger import jsonlogger
 from pynvml import *
 
@@ -9,15 +13,29 @@ except ImportError:
 
 class Perflog:
     def __init__(self, log_file_path = None):
+        """
+        Args:
+            log_file_path: Incase the user does not want the CWD to create a folder called 'logs' and start writing to a file in that folder called 'log.txt'
+        Initialized Vars:
+            self.__handel: The universal handel for NVML to access the GPU at index 0 for single GPU systems
+            self.__isnvidia: Checks the precense of NVIDIA GPU using the self.__check_nvidia() function
+            self.__total_runtime:
+            self.__last_lap_time: 
+            self.__current_process:
+
+        """
+        # Setup the file and logging variable
         self.__steup_logger(log_file_path)
 
+        # Checking for a NVIDIA GPU
         self.__isnvidia = self.__check_nvidia()
 
-        # Setting up universal NVML handel
+        # Setting up universal NVML handel if a NVIDIA GPU is detected
         if self.__isnvidia:
             nvmlInit()
             self.__handle = nvmlDeviceGetHandleByIndex(0)
 
+        # Intializing variabls
         self.__total_runtime = 0
         self.__last_lap_time = 0
 
@@ -27,16 +45,23 @@ class Perflog:
         # Creating an object for the current process
         self.__current_process = psutil.Process(os.getpid())
 
-        # Initilization step to start counting 
+        # Initilization step to start counting as these two functions have to be initialized once before a log is created
+        # since this initialization creates the base for the system to start counting
         self.__get_cpu_util()
         self.__get_process_cpu_util()
 
     def __steup_logger(self, log_file_path):
+        """
+        Args:
+            log_file_path: Incase the user does not want the CWD to create a folder called 'logs' and start writing to a file in that folder called 'log.txt'
+        Initialized Vars:
+            self.__logger: 
+        """
         self.__logger = logging.getLogger("PerfLog")
         self.__logger.setLevel(logging.DEBUG)
         cwd = os.path.abspath(os.getcwd())
         if not log_file_path:
-            log_dir_path = cwd + "/log"
+            log_dir_path = cwd + "/logs"
             log_file_path = log_dir_path + "/log.txt"
 
         if not os.path.isdir(log_dir_path):
@@ -71,11 +96,7 @@ class Perflog:
                     'cpu_clockspeed' : self.__get_cpu_clock(),
                     'ram' : self.__get_ram_usage(),
                     'process_cpu_utilization' : self.__get_process_cpu_util(),
-                    'process_ram' : self.__get_process_ram_usage(),
-                    'gpu_utilization' : "None",
-                    'gpu_clockspeed' : "None",
-                    'vram' : "None",
-                    'process_vram' : "None"
+                    'process_ram' : self.__get_process_ram_usage()
                     })
 
     def __get_lap(self):
