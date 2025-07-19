@@ -1,5 +1,5 @@
 import unittest
-from perflog import Perflog
+from sb_perflog import Perflog
 
 class TestPerflog(unittest.TestCase):
     def setUp(self):
