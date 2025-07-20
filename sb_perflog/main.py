@@ -24,7 +24,7 @@ class Perflog:
 
         """
         # Setup the file and logging variable
-        self.__steup_logger__()
+        self.__setup_logger__()
 
         # Checking for a NVIDIA GPU
         self.__isnvidia = self.__check_nvidia__()
@@ -44,7 +44,7 @@ class Perflog:
         # Creating an object for the current process
         self.__current_process = psutil.Process(os.getpid())
 
-    def __steup_logger__(self):
+    def __setup_logger__(self):
         """
         Args:
             log_file_path: Incase the user does not want the CWD to create a folder called 'logs' and start writing to a file in that folder called 'log.txt'
@@ -180,7 +180,7 @@ class Perflog:
                 else:
                     return False
         except Exception as e:
-                self.__logger.error(f"Eror checking for NVIDIA graphics card. So no card exists. {e}")
+                self.__logger.error(f"Error checking for NVIDIA graphics card. So no card exists. {e}")
                 return False
 
     def get_gpu_clock(self):
